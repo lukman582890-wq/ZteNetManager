@@ -228,6 +228,30 @@ public partial class MainWindow : Window
         await ScanLocalAsync();
     }
 
+    private void OpenRouterAdmin_Click(object sender, RoutedEventArgs e)
+    {
+        var gatewayText = GatewayText.Text;
+        if (!IPAddress.TryParse(gatewayText, out var gateway) ||
+            gateway.AddressFamily != AddressFamily.InterNetwork ||
+            IPAddress.IsLoopback(gateway))
+        {
+            MessageBox.Show("Gateway IPv4 belum terdeteksi. Jalankan pemindaian jaringan terlebih dahulu.",
+                "Admin router tidak tersedia", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            var uri = new UriBuilder(Uri.UriSchemeHttp, gateway.ToString()).Uri;
+            Process.Start(new ProcessStartInfo { FileName = uri.ToString(), UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Tidak dapat membuka halaman router: {ex.Message}",
+                "Gagal membuka admin router", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     private void Router_Click(object sender, RoutedEventArgs e)
     {
         PageTitle.Text = "Router diagnostics";
