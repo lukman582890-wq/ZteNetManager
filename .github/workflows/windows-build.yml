@@ -1,0 +1,43 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [main, "work/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Show SDK
+        run: dotnet --info
+      - name: Restore
+        run: dotnet restore ZteNetManager.sln
+      - name: Build Release
+        run: dotnet build ZteNetManager.sln --configuration Release --no-restore
+      - name: Test
+        shell: pwsh
+        run: |
+          $tests = Get-ChildItem -Path . -Filter "*Tests.csproj" -Recurse
+          if ($tests.Count -eq 0) { Write-Host "No test project found yet; no tests executed." }
+          else { dotnet test ZteNetManager.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" }
+      - name: Publish self-contained Windows x64
+        run: dotnet publish src/ZteNetManager.App/ZteNetManager.App.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --output artifacts/publish
+      - name: Upload Windows app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZteNetManager-win-x64
+          path: artifacts/publish/**
+          if-no-files-found: error
+          retention-days: 14
