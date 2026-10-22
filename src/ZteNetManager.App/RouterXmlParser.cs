@@ -142,3 +142,16 @@ public sealed record RouterAccessPoint(string Ssid, string InstanceId, string Ra
 }
 
 public sealed record RouterMacRule(string InstanceId, string Name, string MacAddress, string InterfaceReference);
+
+public sealed record RouterWifiClient(
+    string InstanceId,
+    string HostName,
+    string IPAddress,
+    string MacAddress,
+    string AccessPointReference,
+    string SsidName,
+    string Rssi,
+    string WifiMode,
+    string LinkTimeSeconds);
+
+public sealed record RouterSsid(string InstanceId, string Alias, string Essid);
