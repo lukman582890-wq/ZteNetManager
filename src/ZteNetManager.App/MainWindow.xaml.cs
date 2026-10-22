@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Windows;
 
@@ -252,11 +253,50 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Router_Click(object sender, RoutedEventArgs e)
+    private async void Router_Click(object sender, RoutedEventArgs e)
     {
         PageTitle.Text = "Router diagnostics";
-        Subtitle.Text = "ZTE F6201B — kemampuan firmware otomatis belum diverifikasi.";
-        StatusText.Text = "Gateway dan ARP cache membantu diagnosis LAN, tetapi bukan daftar klien resmi router. Endpoint firmware belum diverifikasi.";
+        Subtitle.Text = "ZTE F6201B — pengujian baca-saja ke halaman utama router.";
+        if (!IPAddress.TryParse(GatewayText.Text, out var gateway) ||
+            gateway.AddressFamily != AddressFamily.InterNetwork ||
+            IPAddress.IsLoopback(gateway))
+        {
+            StatusText.Text = "Tes gagal: gateway IPv4 belum tersedia. Pastikan PC terhubung ke jaringan router.";
+            return;
+        }
+
+        StatusText.Text = $"Menguji halaman web router di {gateway} (GET saja; tidak mengirim kredensial)...";
+        using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true })
+        {
+            Timeout = TimeSpan.FromSeconds(4)
+        };
+
+        var failures = new List<string>();
+        foreach (var scheme in new[] { Uri.UriSchemeHttp, Uri.UriSchemeHttps })
+        {
+            var uri = new UriBuilder(scheme, gateway.ToString()).Uri;
+            try
+            {
+                using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+                var finalUri = response.RequestMessage?.RequestUri ?? uri;
+                StatusText.Text = $"Router merespons: HTTP {(int)response.StatusCode} ({response.StatusCode}) di {finalUri}. Ini hanya membuktikan halaman web merespons; API, login, dan daftar klien belum diverifikasi.";
+                return;
+            }
+            catch (TaskCanceledException)
+            {
+                failures.Add($"{scheme.ToUpperInvariant()}: timeout");
+            }
+            catch (HttpRequestException ex)
+            {
+                failures.Add($"{scheme.ToUpperInvariant()}: {ex.Message}");
+            }
+            catch (InvalidOperationException ex)
+            {
+                failures.Add($"{scheme.ToUpperInvariant()}: {ex.Message}");
+            }
+        }
+
+        StatusText.Text = $"Halaman web router tidak berhasil diakses. {string.Join(" | ", failures)}. Coba tombol Buka Admin Router atau periksa alamat gateway dan koneksi.";
     }
 
     private void Access_Click(object sender, RoutedEventArgs e)
