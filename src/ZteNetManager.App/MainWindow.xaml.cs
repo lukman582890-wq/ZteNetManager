@@ -68,14 +68,15 @@ public partial class MainWindow : Window
         try
         {
             StatusText.Text = "Memindai host pada subnet lokal dan membaca ARP cache...";
-            var rows = await Task.Run(DiscoverDevices);
+            var scan = await Task.Run(DiscoverDevices);
+            var rows = scan.Devices;
             _devices.Clear();
             foreach (var row in rows.OrderBy(r => r.IPv4, IpAddressComparer.Instance))
                 _devices.Add(row);
             DeviceCount.Text = _devices.Count.ToString();
             StatusText.Text = rows.Count == 0
-                ? "Tidak ada perangkat yang terdeteksi. Pastikan PC terhubung ke LAN/Wi-Fi yang benar."
-                : $"Selesai: {rows.Count} entri ditemukan. ARP cache bukan daftar pasti semua perangkat online; perangkat yang memblokir ICMP mungkin tidak terdeteksi.";
+                ? "Tidak ada perangkat yang terdeteksi. Pastikan PC terhubung ke LAN/Wi-Fi yang benar. " + scan.Note
+                : $"Selesai: {rows.Count} entri ditemukan. {scan.Note}ARP cache bukan daftar pasti semua perangkat online; perangkat yang memblokir ICMP mungkin tidak terdeteksi.";
         }
         catch (Exception ex)
         {
@@ -84,19 +85,22 @@ public partial class MainWindow : Window
         finally { _scanRunning = false; }
     }
 
-    private static List<DeviceRow> DiscoverDevices()
+    private static (List<DeviceRow> Devices, string Note) DiscoverDevices()
     {
         var results = new Dictionary<string, DeviceRow>(StringComparer.OrdinalIgnoreCase);
         var lan = FindLanInterface();
         if (lan is null)
-            return results.Values.ToList();
+            return (results.Values.ToList(), "Tidak ditemukan adapter IPv4 aktif dengan default gateway.");
+
+        var note = "";
 
         results[lan.Address.ToString()] = new DeviceRow("PC ini", lan.Address.ToString(), lan.Mac, lan.Name, "Interface lokal");
 
         if (!TryGetSmallSubnet(lan.Address, lan.Mask, out var hosts, out var reason))
         {
             results[lan.Gateway.ToString()] = new DeviceRow("Gateway", lan.Gateway.ToString(), "—", "Gateway", "Terdeteksi dari konfigurasi Windows");
-            return results.Values.ToList();
+            note = $"{reason}. Pemindaian aktif hanya dijalankan untuk subnet /24 sampai /30; ";
+            return (results.Values.ToList(), note);
         }
 
         // Bound the scan to at most 254 host addresses on the directly connected LAN.
@@ -112,6 +116,8 @@ public partial class MainWindow : Window
                     catch (PingException) { }
                     catch (SocketException) { }
                     catch (InvalidOperationException) { }
+                    catch (ObjectDisposedException) { }
+                    catch (TimeoutException) { }
                 }
                 finally { semaphore.Release(); }
             }).ToArray();
@@ -129,7 +135,7 @@ public partial class MainWindow : Window
         if (!results.ContainsKey(lan.Gateway.ToString()))
             results[lan.Gateway.ToString()] = new DeviceRow("Gateway modem/router", lan.Gateway.ToString(), "—", "Gateway", "Dari konfigurasi Windows");
 
-        return results.Values.ToList();
+        return (results.Values.ToList(), note);
     }
 
     private static bool TryGetSmallSubnet(IPAddress address, IPAddress mask, out HashSet<IPAddress> hosts, out string reason)
