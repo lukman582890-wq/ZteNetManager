@@ -1,31 +1,36 @@
 # ZTE IndiHome Network Manager
 
-Windows desktop app for monitoring devices on your own ZTE F6201B IndiHome network and managing Wi-Fi MAC access control where the router firmware supports it.
+A Windows desktop utility for inspecting the local network connected to a ZTE F6201B router. Router write operations remain disabled until the exact firmware's authenticated interface is verified.
 
-## Current status
+## Current features
 
-This repository is being bootstrapped. The initial implementation focuses on a safe Windows build pipeline and a WPF application foundation.
+- WPF dashboard for Windows.
+- Detects the IPv4 gateway from an active local interface.
+- Scans only a directly connected IPv4 subnet with a prefix from /24 to /30 (maximum 254 addresses).
+- Reads the Windows ARP cache after the scan to display IP/MAC entries.
+- Labels discovery data carefully: ARP cache entries are not a guaranteed live inventory, and devices that block ICMP or do not refresh ARP may be missed.
+- Windows GitHub Actions workflow builds and publishes a self-contained x64 application artifact.
 
-- Router identified by user: ZTE F6201B.
-- Screenshots show WLAN access control modes per SSID (No Filter / Black List / White List) and MAC-address rules.
-- The UI controls do not establish that a third-party app can change them automatically. Router integration must be verified against actual firmware.
-- LAN filtering is separate from WLAN MAC filtering and must not be advertised as supported unless verified.
-- Never commit router credentials.
+## Known limitations
+
+- This is not yet a complete router-client inventory; the router's own authenticated client list is more authoritative.
+- ZTE F6201B automatic MAC filtering is not implemented. The visible web UI options do not prove that a stable, safe API is available.
+- LAN filtering and WLAN MAC filtering are different features. LAN filtering is unsupported until verified.
+- No router password, cookie, or session token should be committed or logged.
+- The app is a development build, not an installer.
 
 ## Build on Windows
 
-The GitHub Actions workflow **Windows Build** restores dependencies, builds Release, runs tests when present, publishes a self-contained Windows x64 app, and uploads the artifacts. See the Actions tab.
-
-Local commands:
+Install the .NET 10 SDK and run:
 
 ```powershell
 dotnet restore ZteNetManager.sln
 dotnet build ZteNetManager.sln -c Release --no-restore
-dotnet test ZteNetManager.sln -c Release --no-build
+dotnet publish src/ZteNetManager.App/ZteNetManager.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/publish
 ```
 
-See [docs/ROUTER-INTEGRATION.md](docs/ROUTER-INTEGRATION.md).
+Run the published ZteNetManager.exe from artifacts/publish. The GitHub Actions artifact is available from the latest successful run under the Actions tab.
 
-## Security
+## Safety
 
-Use only on a network you own or administer. Confirm the target MAC before blocking; private/randomized MAC addresses may change. A request being sent is not proof of blocking; distinguish router rule state from verified access restriction.
+Use only on a network you own or are authorized to administer. Confirm a device's MAC before changing any access rule; private/randomized MAC addresses may vary. A rule being configured is not proof that access was actually denied.
