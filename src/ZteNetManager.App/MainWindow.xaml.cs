@@ -116,7 +116,6 @@ public partial class MainWindow : Window
                     catch (PingException) { }
                     catch (SocketException) { }
                     catch (InvalidOperationException) { }
-                    catch (ObjectDisposedException) { }
                     catch (TimeoutException) { }
                 }
                 finally { semaphore.Release(); }
