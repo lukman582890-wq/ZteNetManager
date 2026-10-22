@@ -26,6 +26,18 @@ The request tag observed in DevTools is `wlan_macfilterrule`. Its XML response c
 
 The supplied snapshot showed one rule associated with `DEV.WIFI.AP1`. A rule's presence alone does not prove that the device is currently blocked; the AP policy must also be interpreted and the router's behavior verified.
 
+
+### Associated Wi-Fi clients and SSID names
+
+A further user-supplied read-only XML snapshot contains `OBJ_WLAN_AD_ID` instances for associated Wi-Fi clients. Observed fields include:
+
+- `_InstID`: client instance, such as `DEV.WIFI.AP6.AD1`
+- `AliasName`: access-point reference, such as `DEV.WIFI.AP6`
+- `HostName`, `IPAddress`, `MACAddress`
+- `RSSI`, `CurrentMode`, `LinkTime`, plus radio/traffic counters
+
+The same response includes `OBJ_WLANAP_ID` entries with `Alias` and `ESSID`. The parser now reads this shape and resolves the AP reference to the configured SSID name when the client entry's `SSIDName` is empty or reports `Kosong`. This behavior is covered by an automated parser test. The snapshot is a point-in-time list of associated Wi-Fi clients, not necessarily wired LAN clients or a current live view.
+
 ### Transport and session caveats
 
 The observed requests are HTTP GETs returning XML with success markers such as `IF_ERRORSTR=SUCC`. They were made from an authenticated browser session. The exact URL parameters, session requirements, firmware behavior, and expiry handling must be verified before the desktop app can safely make these requests. Do not copy browser cookies or session identifiers into the source code, logs, repository, or support messages.
@@ -50,4 +62,4 @@ The app intentionally skips active sweeps of broader subnets to avoid scanning a
 
 ## Current status
 
-Local gateway and ARP-cache discovery are implemented. The XML response structures for WLAN policy and MAC rule inventory have been identified from the user's authenticated browser session. A reusable, DTD-disabled XML parser has been added for the observed access-point policy and MAC-rule response shapes. End-to-end authenticated reads from the desktop app, complete router client inventory, and automatic MAC filtering are not yet implemented. The UI must not claim a device is blocked until that behavior can be verified.
+Local gateway and ARP-cache discovery are implemented. The XML response structures for WLAN policy and MAC rule inventory have been identified from the user's authenticated browser session. A reusable, DTD-disabled XML parser has been added for the observed access-point policy, MAC-rule, associated Wi-Fi client, and SSID-name response shapes. Automated assertions cover these parser paths. End-to-end authenticated reads from the desktop app, complete router client inventory, and automatic MAC filtering are not yet implemented. The UI must not claim a device is blocked until that behavior can be verified.
