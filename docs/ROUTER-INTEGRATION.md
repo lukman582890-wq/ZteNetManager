@@ -1,8 +1,34 @@
 # ZTE F6201B router integration
 
-Screenshots supplied by the user show the authenticated F6201B UI with WLAN Access Control modes per SSID (No Filter / Black List / White List) and a rule editor with Name, SSID and MAC Address fields.
+Screenshots and read-only responses supplied by the user confirm the authenticated F6201B web UI exposes WLAN MAC-filter configuration over HTTP XHR/XML.
 
-This establishes that WLAN MAC rules exist in the web UI. It does not establish stable HTTP endpoints, request payloads, CSRF protections, or login/session behavior for automated changes.
+## Confirmed read-only response shapes
+
+### Per-SSID policy
+
+The request tag observed in DevTools is `wlan_macfilteraclpolicy`. Its XML response contains `OBJ_WLANSETTING_ID` radio instances and `OBJ_WLANAP_ID` access-point instances. The AP instances expose:
+
+- `_InstID`: e.g. `DEV.WIFI.AP1`
+- `Alias`: e.g. `SSID1`
+- `WLANViewName`: radio reference, e.g. `DEV.WIFI.RD1`
+- `ACLPolicy`: observed values include `Ban` (UI Black List) and `Disabled` (No Filter)
+
+The supplied snapshot reported SSID1 as `Ban`; SSID2–SSID8 as `Disabled`. The radio objects mapped RD1 to 2.4 GHz and RD2 to 5 GHz. These are observations from one router snapshot, not defaults to hard-code.
+
+### MAC rule inventory
+
+The request tag observed in DevTools is `wlan_macfilterrule`. Its XML response contains `OBJ_ACLCFG_ID` instances with:
+
+- `_InstID`: e.g. `DEV.ACL1`
+- `MACAddress`: a colon-separated MAC address
+- `Name`: the rule label
+- `Interface`: an AP reference, e.g. `DEV.WIFI.AP1`
+
+The supplied snapshot showed one rule associated with `DEV.WIFI.AP1`. A rule's presence alone does not prove that the device is currently blocked; the AP policy must also be interpreted and the router's behavior verified.
+
+### Transport and session caveats
+
+The observed requests are HTTP GETs returning XML with success markers such as `IF_ERRORSTR=SUCC`. They were made from an authenticated browser session. The exact URL parameters, session requirements, firmware behavior, and expiry handling must be verified before the desktop app can safely make these requests. Do not copy browser cookies or session identifiers into the source code, logs, repository, or support messages.
 
 ## Current local discovery
 
@@ -24,4 +50,4 @@ The app intentionally skips active sweeps of broader subnets to avoid scanning a
 
 ## Current status
 
-Local gateway and ARP-cache discovery are implemented. Complete router client inventory and automatic MAC filtering are not yet implemented. The UI must not claim a device is blocked until that behavior can be verified.
+Local gateway and ARP-cache discovery are implemented. The XML response structures for WLAN policy and MAC rule inventory have been identified from the user's authenticated browser session. End-to-end authenticated reads from the desktop app, complete router client inventory, and automatic MAC filtering are not yet implemented. The UI must not claim a device is blocked until that behavior can be verified.
