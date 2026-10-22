@@ -50,4 +50,4 @@ The app intentionally skips active sweeps of broader subnets to avoid scanning a
 
 ## Current status
 
-Local gateway and ARP-cache discovery are implemented. The XML response structures for WLAN policy and MAC rule inventory have been identified from the user's authenticated browser session. End-to-end authenticated reads from the desktop app, complete router client inventory, and automatic MAC filtering are not yet implemented. The UI must not claim a device is blocked until that behavior can be verified.
+Local gateway and ARP-cache discovery are implemented. The XML response structures for WLAN policy and MAC rule inventory have been identified from the user's authenticated browser session. A reusable, DTD-disabled XML parser has been added for the observed access-point policy and MAC-rule response shapes. End-to-end authenticated reads from the desktop app, complete router client inventory, and automatic MAC filtering are not yet implemented. The UI must not claim a device is blocked until that behavior can be verified.
