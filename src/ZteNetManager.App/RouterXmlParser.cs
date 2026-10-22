@@ -37,6 +37,55 @@ public static class RouterXmlParser
             .ToArray();
     }
 
+    /// <summary>
+    /// Parses the observed OBJ_WLAN_AD_ID associated-client table and resolves
+    /// the AP reference to the configured SSID name when present in the same XML.
+    /// </summary>
+    public static IReadOnlyList<RouterWifiClient> ParseAssociatedClients(string xml)
+    {
+        var root = ParseRoot(xml);
+        var ssids = ReadInstances(root, "OBJ_WLANAP_ID")
+            .Select(values => (Alias: Get(values, "_InstID"), Name: Get(values, "ESSID")))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Alias))
+            .GroupBy(item => item.Alias, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Last().Name, StringComparer.OrdinalIgnoreCase);
+
+        return ReadInstances(root, "OBJ_WLAN_AD_ID")
+            .Select(values =>
+            {
+                var ap = Get(values, "AliasName");
+                var ssid = Get(values, "SSIDName");
+                if (ssids.TryGetValue(ap, out var configuredName) &&
+                    !string.IsNullOrWhiteSpace(configuredName) &&
+                    (string.IsNullOrWhiteSpace(ssid) || ssid.Equals("Kosong", StringComparison.OrdinalIgnoreCase)))
+                    ssid = configuredName;
+                return new RouterWifiClient(
+                    Get(values, "_InstID"),
+                    Get(values, "HostName"),
+                    Get(values, "IPAddress"),
+                    NormalizeMac(Get(values, "MACAddress")),
+                    ap,
+                    ssid,
+                    Get(values, "RSSI"),
+                    Get(values, "CurrentMode"),
+                    Get(values, "LinkTime"));
+            })
+            .Where(item => !string.IsNullOrWhiteSpace(item.MacAddress) ||
+                           !string.IsNullOrWhiteSpace(item.IPAddress) ||
+                           !string.IsNullOrWhiteSpace(item.HostName))
+            .ToArray();
+    }
+
+    /// <summary>Returns configured SSID aliases and names from OBJ_WLANAP_ID.</summary>
+    public static IReadOnlyList<RouterSsid> ParseSsidNames(string xml)
+    {
+        var root = ParseRoot(xml);
+        return ReadInstances(root, "OBJ_WLANAP_ID")
+            .Select(values => new RouterSsid(Get(values, "_InstID"), Get(values, "Alias"), Get(values, "ESSID")))
+            .Where(item => !string.IsNullOrWhiteSpace(item.InstanceId))
+            .ToArray();
+    }
+
     private static XElement ParseRoot(string xml)
     {
         if (string.IsNullOrWhiteSpace(xml))
