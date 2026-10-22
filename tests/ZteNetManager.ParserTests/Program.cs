@@ -77,6 +77,47 @@ Run("DTD is prohibited", () =>
     Throws<XmlException>(() => RouterXmlParser.ParseMacRules(xml));
 });
 
+
+Run("associated Wi-Fi client and SSID mapping", () =>
+{
+    const string xml = """
+        <ajax_response_xml_root>
+          <OBJ_WLAN_AD_ID>
+            <Instance>
+              <ParaName>_InstID</ParaName><ParaValue>DEV.WIFI.AP6.AD1</ParaValue>
+              <ParaName>AliasName</ParaName><ParaValue>DEV.WIFI.AP6</ParaValue>
+              <ParaName>SSIDName</ParaName><ParaValue>Kosong</ParaValue>
+              <ParaName>HostName</ParaName><ParaValue>Test-iPad</ParaValue>
+              <ParaName>IPAddress</ParaName><ParaValue>192.168.1.15</ParaValue>
+              <ParaName>MACAddress</ParaName><ParaValue>5c:91:75:ef:fc:49</ParaValue>
+              <ParaName>RSSI</ParaName><ParaValue>-57</ParaValue>
+              <ParaName>CurrentMode</ParaName><ParaValue>11ax</ParaValue>
+              <ParaName>LinkTime</ParaName><ParaValue>9202</ParaValue>
+            </Instance>
+          </OBJ_WLAN_AD_ID>
+          <OBJ_WLANAP_ID>
+            <Instance>
+              <ParaName>_InstID</ParaName><ParaValue>DEV.WIFI.AP6</ParaValue>
+              <ParaName>Alias</ParaName><ParaValue>SSID6</ParaValue>
+              <ParaName>ESSID</ParaName><ParaValue>Bullsrecords</ParaValue>
+            </Instance>
+          </OBJ_WLANAP_ID>
+        </ajax_response_xml_root>
+        """;
+    var clients = RouterXmlParser.ParseAssociatedClients(xml);
+    Equal(1, clients.Count);
+    Equal("Test-iPad", clients[0].HostName);
+    Equal("192.168.1.15", clients[0].IPAddress);
+    Equal("5C:91:75:EF:FC:49", clients[0].MacAddress);
+    Equal("Bullsrecords", clients[0].SsidName);
+    Equal("-57", clients[0].Rssi);
+    Equal("11ax", clients[0].WifiMode);
+    var ssids = RouterXmlParser.ParseSsidNames(xml);
+    Equal(1, ssids.Count);
+    Equal("SSID6", ssids[0].Alias);
+    Equal("Bullsrecords", ssids[0].Essid);
+});
+
 Console.WriteLine($"All {passed} parser tests passed.");
 
 void Run(string name, Action test)
